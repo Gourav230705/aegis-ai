@@ -10,31 +10,69 @@ export async function fetchSecFilings(ticker: string): Promise<ToolOutputEnvelop
   const timeout = setTimeout(() => controller.abort(), 8000);
 
   try {
-    const apiKey = process.env.SEC_API_KEY;
-    if (!apiKey) throw new Error("Missing SEC_API_KEY");
+    const userAgent = process.env.SEC_USER_AGENT;
+    if (!userAgent) throw new Error("Missing SEC_USER_AGENT");
 
-    // Replace with real SEC API endpoint
-    const response = await fetch(`https://api.example.com/sec/${ticker}?apikey=${apiKey}`, {
+    const headers = { 'User-Agent': userAgent };
+
+    // 1. Fetch Ticker to CIK mapping
+    const mappingRes = await fetch('https://www.sec.gov/files/company_tickers.json', {
+      headers,
       signal: controller.signal,
     });
-
-    if (!response.ok) {
-      throw new Error(`API returned ${response.status}`);
+    if (!mappingRes.ok) throw new Error(`SEC Mapping API returned ${mappingRes.status}`);
+    
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mappingData: Record<string, any> = await mappingRes.json();
+    let cikStr = '';
+    
+    // Search the mapping for the matching ticker (values are { cik_str, ticker, title })
+    for (const key of Object.keys(mappingData)) {
+      if (mappingData[key].ticker.toUpperCase() === ticker.toUpperCase()) {
+        // SEC API requires CIK padded to 10 digits
+        cikStr = mappingData[key].cik_str.toString().padStart(10, '0');
+        break;
+      }
     }
 
-    const data = await response.json();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const citations: Citation[] = (data.filings || []).slice(0, 3).map((filing: any, index: number) => ({
-      id: `sec-${index}-${Date.now()}`,
-      sourceUrl: filing.link,
-      sourceName: 'SEC EDGAR',
-      snippet: filing.summary || 'Summary of recent SEC filing (10-K/10-Q).',
-      timestamp: filing.filedAt || new Date().toISOString(),
-    }));
+    if (!cikStr) throw new Error(`Could not find CIK for ticker ${ticker}`);
+
+    // 2. Fetch submissions for the CIK
+    const submissionsRes = await fetch(`https://data.sec.gov/submissions/CIK${cikStr}.json`, {
+      headers,
+      signal: controller.signal,
+    });
+    if (!submissionsRes.ok) throw new Error(`SEC Submissions API returned ${submissionsRes.status}`);
+    const data = await submissionsRes.json();
+
+    const recent = data.filings?.recent;
+    if (!recent) throw new Error("No recent filings found");
+
+    const citations: Citation[] = [];
+    let count = 0;
+
+    for (let i = 0; i < recent.accessionNumber.length; i++) {
+      if (count >= 3) break;
+      const form = recent.form[i];
+      // Filter to relevant forms
+      if (form === '10-K' || form === '10-Q' || form === '8-K') {
+        const accession = recent.accessionNumber[i].replace(/-/g, '');
+        const primaryDoc = recent.primaryDocument[i];
+        
+        citations.push({
+          id: `sec-${cikStr}-${count}`,
+          sourceUrl: `https://www.sec.gov/Archives/edgar/data/${data.cik}/${accession}/${primaryDoc}`,
+          sourceName: `SEC EDGAR Form ${form}`,
+          snippet: `Filed on ${recent.filingDate[i]}.`,
+          timestamp: recent.filingDate[i],
+        });
+        count++;
+      }
+    }
 
     const result: ToolOutputEnvelope<Citation[]> = {
       value: citations,
-      source: 'SECFilingsAPI',
+      source: 'SEC EDGAR API',
       fetchedAt: new Date().toISOString(),
       isMock: false,
     };

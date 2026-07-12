@@ -1,37 +1,48 @@
 import { AgentState } from "../graph";
+import { fetchFinancialData } from "../../tools/financialData";
+import { fetchSecFilings } from "../../tools/secFilings";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const dataCollectorNode = async (state: AgentState): Promise<Partial<AgentState>> => {
   console.log("[Data Collector Node] Gathering evidence...");
   
-  // Here we would call the tools from src/tools/ (financialData, newsSearch, secFilings)
-  // For the integration test, we will mock the evidence returned.
-  
-  const mockEvidence = [
-    {
-      id: "ev-1",
-      claim: "Strong revenue growth expected.",
+  if (!state.company) throw new Error("No company in state");
+
+  // Call the newly implemented production APIs
+  const financialOut = await fetchFinancialData(state.company.ticker, state.company.name);
+  const secOut = await fetchSecFilings(state.company.ticker);
+
+  const evidence = [];
+
+  // Map Financial Data to an Evidence claim
+  evidence.push({
+    id: "ev-fin",
+    claim: `Financials: Market Cap $${financialOut.value.marketCap}, P/E ${financialOut.value.peRatio}, Revenue Growth ${financialOut.value.revenueGrowth}`,
+    isVerified: true,
+    citations: [{
+      id: `c-fin-${Date.now()}`,
+      sourceUrl: "https://finnhub.io",
+      sourceName: financialOut.source,
+      snippet: "Company financial metrics",
+      timestamp: financialOut.fetchedAt
+    }]
+  });
+
+  // Map SEC Filings to an Evidence claim
+  if (secOut.value.length > 0) {
+    evidence.push({
+      id: "ev-sec",
+      claim: "Recent SEC EDGAR Filings retrieved successfully.",
       isVerified: true,
-      citations: [
-        { id: "c-1", sourceUrl: "https://example.com/1", sourceName: "Financial Report", snippet: "Revenue grew 20%.", timestamp: new Date().toISOString() }
-      ]
-    },
-    {
-      id: "ev-2",
-      claim: "Regulatory risks present in new market.",
-      isVerified: true,
-      citations: [
-        { id: "c-2", sourceUrl: "https://example.com/2", sourceName: "SEC Filing", snippet: "Risk factor: regulation.", timestamp: new Date().toISOString() }
-      ]
-    }
-  ];
+      citations: secOut.value
+    });
+  }
 
   return {
     thesis: {
       thesis: "",
       bullCase: [],
       bearCase: [],
-      evidenceUsed: mockEvidence
+      evidenceUsed: evidence
     },
     status: "DATA_COLLECTION_COMPLETE"
   };

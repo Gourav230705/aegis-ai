@@ -34,3 +34,10 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Environment Variables
+
+To run the application with real LLM analysis, ensure you provide the necessary API keys in your `.env` file:
+- `GROQ_API_KEY`: Required to power the LangGraph analysis using Groq's API.
+- `FINNHUB_API_KEY`: Required to fetch real financial metrics (obtain from https://finnhub.io).
+- `SEC_USER_AGENT`: Required to query the SEC EDGAR API (format: 'CompanyName YourEmail').

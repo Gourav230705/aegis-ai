@@ -18,28 +18,37 @@ export async function fetchFinancialData(ticker: string, companyName: string): P
   const timeout = setTimeout(() => controller.abort(), 8000);
 
   try {
-    const apiKey = process.env.FINANCIAL_DATA_API_KEY;
-    if (!apiKey) throw new Error("Missing FINANCIAL_DATA_API_KEY");
+    const apiKey = process.env.FINNHUB_API_KEY;
+    if (!apiKey) throw new Error("Missing FINNHUB_API_KEY");
 
-    // Replace with real API endpoint in production
-    const response = await fetch(`https://api.example.com/financials/${ticker}?apikey=${apiKey}`, {
+    // Fetch company profile (for market cap and name)
+    const profileRes = await fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${ticker}&token=${apiKey}`, {
       signal: controller.signal,
     });
+    if (!profileRes.ok) throw new Error(`Profile API returned ${profileRes.status}`);
+    const profileData = await profileRes.json();
 
-    if (!response.ok) {
-      throw new Error(`API returned ${response.status}`);
-    }
+    // Fetch basic financials (for P/E and revenue growth)
+    const metricsRes = await fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${ticker}&metric=all&token=${apiKey}`, {
+      signal: controller.signal,
+    });
+    if (!metricsRes.ok) throw new Error(`Metrics API returned ${metricsRes.status}`);
+    const metricsData = await metricsRes.json();
 
-    const data = await response.json();
+    // Finnhub marketCap is in millions, convert to actual
+    const marketCap = profileData.marketCapitalization ? profileData.marketCapitalization * 1000000 : 0;
+    // Basic financials metric object
+    const metric = metricsData.metric || {};
+
     const result: ToolOutputEnvelope<FinancialData> = {
       value: {
-        companyName: data.name || companyName,
+        companyName: profileData.name || companyName,
         ticker,
-        marketCap: data.marketCap || 0,
-        peRatio: data.peRatio || 0,
-        revenueGrowth: data.revenueGrowth || 0,
+        marketCap,
+        peRatio: metric.peExclExtraTTM || metric.peNormalizedAnnual || 0,
+        revenueGrowth: metric.revenueGrowthTTMYoy || metric.revenueGrowth5Y || 0,
       },
-      source: 'FinancialDataAPI',
+      source: 'Finnhub',
       fetchedAt: new Date().toISOString(),
       isMock: false,
     };

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { AgentState } from "../graph";
+import { createLLM } from "../../lib/llm";
 
 // Define the structured output schema for LangChain
 export const judgeOutputSchema = z.object({
@@ -19,33 +20,21 @@ DO NOT output a confidence score.`;
 export const judgeAgentNode = async (state: AgentState): Promise<Partial<AgentState>> => {
   console.log("[Judge Agent] Synthesizing cases and making decision...");
 
-  // TODO: Connect actual LangChain model with structured output binding
-  /*
-  const model = new ChatOpenAI({ temperature: 0 }).withStructuredOutput(judgeOutputSchema, { name: "decision" });
-  const response = await model.invoke(JUDGE_SYSTEM_PROMPT + ...);
-  */
-
-  // Mocking the structured extraction based on the schema
-  const mockDecision: JudgeDecision = {
-    recommendation: "BUY",
-    investmentTheses: [
-      "Company shows strong fundamentals and growth potential.",
-      "Bearish risks are adequately mitigated by the new product line."
-    ],
-    sourceCitations: [0, 1]
-  };
+  const model = createLLM().withStructuredOutput(judgeOutputSchema, { name: "decision" });
+  const prompt = `${JUDGE_SYSTEM_PROMPT}\n\nCompany: ${state.company?.name}\n\nBull Case:\n${state.thesis?.bullCase.join("\\n")}\n\nBear Case:\n${state.thesis?.bearCase.join("\\n")}\n\nEvidence:\n${JSON.stringify(state.thesis?.evidenceUsed)}`;
+  const decision = await model.invoke(prompt);
 
   const currentThesis = state.thesis || { thesis: "", bullCase: [], bearCase: [], evidenceUsed: [] };
 
   // Combine recommendation and theses into the single thesis string for the domain model
-  const finalThesisString = `[RECOMMENDATION: ${mockDecision.recommendation}] \n\n` + mockDecision.investmentTheses.join("\n");
+  const finalThesisString = `[RECOMMENDATION: ${decision.recommendation}] \n\n` + decision.investmentTheses.join("\n");
 
   return {
     thesis: {
       ...currentThesis,
       thesis: finalThesisString
     },
-    judgeCitations: mockDecision.sourceCitations,
+    judgeCitations: decision.sourceCitations,
     status: "JUDGE_COMPLETE"
   };
 };

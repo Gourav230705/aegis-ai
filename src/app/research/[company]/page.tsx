@@ -167,8 +167,6 @@ export default function ResearchDashboard({ params }: { params: Promise<{ compan
                     <tr key={ev.id || i} className="hover:bg-gray-50/50">
                       <td className="px-4 py-3 align-top">
                         {ev.claim}
-                        {/* Mock data badge for claims */}
-                        <MockBadge />
                       </td>
                       <td className="px-4 py-3 align-top">
                         {ev.isVerified ? (
@@ -261,7 +259,6 @@ export default function ResearchDashboard({ params }: { params: Promise<{ compan
             <div className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-5">
               <h3 className="text-lg font-semibold text-emerald-800 mb-3 flex items-center">
                 <span className="text-xl mr-2">🐂</span> Bull Case
-                <MockBadge />
               </h3>
               <ul className="space-y-2">
                 {(state.thesis?.bullCase?.length || 0) > 0 ? (
@@ -281,7 +278,6 @@ export default function ResearchDashboard({ params }: { params: Promise<{ compan
             <div className="bg-rose-50/50 border border-rose-100 rounded-lg p-5">
               <h3 className="text-lg font-semibold text-rose-800 mb-3 flex items-center">
                 <span className="text-xl mr-2">🐻</span> Bear Case
-                <MockBadge />
               </h3>
               <ul className="space-y-2">
                 {(state.thesis?.bearCase?.length || 0) > 0 ? (
