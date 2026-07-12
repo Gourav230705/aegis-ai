@@ -45,6 +45,7 @@ export const judgeAgentNode = async (state: AgentState): Promise<Partial<AgentSt
       ...currentThesis,
       thesis: finalThesisString
     },
+    judgeCitations: mockDecision.sourceCitations,
     status: "JUDGE_COMPLETE"
   };
 };

@@ -45,6 +45,9 @@ export interface ResearchManifest {
   failures: number;
   verifiedCitations: number;
   researchDurationMs: number;
+  researchQuality?: number;
+  decisionConfidence?: number;
+  verificationWarnings?: string[];
 }
 
 export interface ToolOutputEnvelope<T = unknown> {

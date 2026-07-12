@@ -8,6 +8,8 @@ export interface AgentState {
   thesis: InvestmentThesis | null;
   plan: string[];
   status: string;
+  verificationWarnings: string[];
+  judgeCitations: number[];
 }
 
 // 1. Define state channels
@@ -31,6 +33,14 @@ const agentStateChannels = {
   status: {
     value: (x: string, y?: string) => y ?? x,
     default: () => "INIT",
+  },
+  verificationWarnings: {
+    value: (x: string[], y?: string[]) => y ? x.concat(y) : x,
+    default: () => [],
+  },
+  judgeCitations: {
+    value: (x: number[], y?: number[]) => y ?? x,
+    default: () => [],
   }
 };
 
