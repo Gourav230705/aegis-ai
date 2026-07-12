@@ -30,7 +30,16 @@ const agentStateChannels = {
     default: () => null,
   },
   thesis: {
-    value: (x: InvestmentThesis | null, y?: InvestmentThesis | null) => y ?? x,
+    value: (x: InvestmentThesis | null, y?: InvestmentThesis | null) => {
+      if (!x) return y ?? null;
+      if (!y) return x;
+      return {
+        thesis: y.thesis || x.thesis,
+        bullCase: y.bullCase && y.bullCase.length > 0 ? y.bullCase : x.bullCase,
+        bearCase: y.bearCase && y.bearCase.length > 0 ? y.bearCase : x.bearCase,
+        evidenceUsed: y.evidenceUsed && y.evidenceUsed.length > 0 ? y.evidenceUsed : x.evidenceUsed,
+      };
+    },
     default: () => null,
   },
   plan: {
