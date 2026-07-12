@@ -1,6 +1,13 @@
 import { StateGraph, START, END } from "@langchain/langgraph";
 import { Company, ResearchManifest, InvestmentThesis } from "../types/domain";
 
+import { plannerNode } from "./nodes/planner";
+import { dataCollectorNode } from "./nodes/dataCollector";
+import { bullAgentNode } from "./nodes/bullAgent";
+import { bearAgentNode } from "./nodes/bearAgent";
+import { judgeAgentNode } from "./nodes/judgeAgent";
+import { verifierNode } from "./nodes/verifier";
+
 // Define the State shape using domain.ts types
 export interface AgentState {
   company: Company | null;
@@ -44,34 +51,28 @@ const agentStateChannels = {
   }
 };
 
-// 2. Define the nodes
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const plannerNode = async (state: AgentState): Promise<Partial<AgentState>> => {
-  console.log("[Planner Node] Generating plan...");
-  return {
-    plan: ["Step 1: Collect Data", "Step 2: Analyze Data"],
-    status: "PLANNING_COMPLETE",
-  };
-};
-
-// NOTE: this dummy node is scaffolding and will be removed in Step 010.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const dummyExecutionNode = async (state: AgentState): Promise<Partial<AgentState>> => {
-  console.log("[Dummy Node] Executing temporary logic...");
-  return {
-    status: "EXECUTION_COMPLETE",
-  };
-};
-
-// 3. Build Graph
+// 2. Build Graph
 const workflow = new StateGraph<AgentState>({
   channels: agentStateChannels
 })
   .addNode("planner", plannerNode)
-  .addNode("dummyExecution", dummyExecutionNode)
+  .addNode("dataCollector", dataCollectorNode)
+  .addNode("bullAgent", bullAgentNode)
+  .addNode("bearAgent", bearAgentNode)
+  .addNode("judgeAgent", judgeAgentNode)
+  .addNode("verifier", verifierNode)
+  
+  // Wire the complete path
   .addEdge(START, "planner")
-  .addEdge("planner", "dummyExecution")
-  .addEdge("dummyExecution", END);
+  .addEdge("planner", "dataCollector")
+  // Parallel nodes
+  .addEdge("dataCollector", "bullAgent")
+  .addEdge("dataCollector", "bearAgent")
+  // Both flow into judge
+  .addEdge("bullAgent", "judgeAgent")
+  .addEdge("bearAgent", "judgeAgent")
+  .addEdge("judgeAgent", "verifier")
+  .addEdge("verifier", END);
 
-// 4. Compile the graph
+// 3. Compile the graph
 export const aegisResearchGraph = workflow.compile();
