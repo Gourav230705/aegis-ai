@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function middleware(_request: NextRequest) {
-  const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
+  const nonce = btoa(crypto.randomUUID());
   
   // CSP Scaffolding
   const cspHeader = `
