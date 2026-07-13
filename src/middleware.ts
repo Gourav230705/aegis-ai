@@ -3,15 +3,18 @@ import type { NextRequest } from 'next/server';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function middleware(_request: NextRequest) {
-  const nonce = btoa(crypto.randomUUID());
+
   
   // CSP Scaffolding
+  // TEMPORARY DEBUGGING CONFIGURATION: Relaxed CSP for Vercel deployment.
+  // This should be tightened before production.
   const cspHeader = `
     default-src 'self';
-    script-src 'self' 'nonce-${nonce}' 'strict-dynamic';
+    script-src 'self' 'unsafe-inline' 'unsafe-eval';
+    connect-src 'self' https:;
     style-src 'self' 'unsafe-inline';
-    img-src 'self' blob: data:;
-    font-src 'self';
+    img-src 'self' blob: data: https:;
+    font-src 'self' data:;
     object-src 'none';
     base-uri 'self';
     form-action 'self';
